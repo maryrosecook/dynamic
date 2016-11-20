@@ -18,14 +18,24 @@
 
   function draw(state, screen) {
     screen.clearRect(0, 0, screen.canvas.width, screen.canvas.height);
+    state.recordings.forEach(_.partial(drawRecording, screen));
+  };
 
-    state.groups.forEach(function(group, i) {
-      screen.fillStyle = group.selected ? "red" : "black";
+  function drawRecording(screen, recording) {
+    screen.fillStyle = recording.selected ? "red" : "black";
 
-      group.forEach(function(position) {
-        screen.fillRect(position.x, position.y, 20, 20);
+    if (recording.playStart !== undefined) {
+      var slowdown = 20;
+      var eventIndex = Math.floor(((Date.now() - recording.playStart) % (recording.data.length * slowdown)) / slowdown);
+
+      recording.data.slice(0, eventIndex).forEach(function(event) {
+        screen.fillRect(event.data.x, event.data.y, 20, 20);
       });
-    });
+    } else {
+      recording.data.forEach(function(event) {
+        screen.fillRect(event.data.x, event.data.y, 20, 20);
+      });
+    }
   };
 
   function gatherEvents(window) {
@@ -63,7 +73,7 @@
 
   function update(events, state) {
     updateInput(events, state);
-    updateGroups(events, state);
+    updateRecordings(events, state);
   };
 
   function updateInput(events, state) {
@@ -74,62 +84,80 @@
     }
   };
 
-  function updateGroups(events, state) {
-    state.currentGroup = currentGroup(state, state.currentGroup, events);
-    state.groups = addToGroups(state, state.groups, events);
-    state.groups = highlightGroups(state, state.groups, events);
-    state.groups = moveGroup(state, state.groups);
+  function updateRecordings(events, state) {
+    state.currentRecording = currentRecording(state, state.currentRecording, events);
+    state.recordings = addToRecordings(state, state.recordings, events);
+    state.recordings = highlightRecordings(state, state.recordings, events);
+    state.recordings = moveRecording(state, state.recordings);
+    state.recordings = toggleRecordingsPlaying(state, state.recordings);
   };
 
-  function moveGroup(state, groups) {
+  function toggleRecordingsPlaying(state, recordings) {
+    if (!state.input.keysDown.previous.o &&
+        state.input.keysDown.current.o) {
+      recordings
+        .filter(function (recording) { return recording.selected; })
+        .forEach(function(recording) {
+          recording.playStart = recording.playStart === undefined ? Date.now() : undefined;
+        });
+    }
+
+    return recordings;
+  };
+
+  function moveRecording(state, recordings) {
     if (state.input.mouseDown) {
       var movement = {
         x: state.input.mousePosition.current.x - state.input.mousePosition.previous.x,
         y: state.input.mousePosition.current.y - state.input.mousePosition.previous.y
       };
 
-      groups
-        .filter(function (group) { return group.selected; })
-        .forEach(function(group) {
-          group.forEach(function(event) {
-            event.x += movement.x;
-            event.y += movement.y;
+      recordings
+        .filter(function (recording) { return recording.selected; })
+        .forEach(function(recording) {
+          recording.data.forEach(function(event) {
+            event.data.x += movement.x;
+            event.data.y += movement.y;
           });
         });
     }
 
-    return groups;
+    return recordings;
   };
 
-  function currentGroup(state, previousCurrentGroup, events) {
+  function currentRecording(state, previousCurrentRecording, events) {
     var aGoneUp = state.input.keysDown.previous.a === true &&
         state.input.keysDown.current.a === false;
-    return aGoneUp ? previousCurrentGroup + 1 : previousCurrentGroup;
+    return aGoneUp ? previousCurrentRecording + 1 : previousCurrentRecording;
   };
 
-  function highlightGroups(state, groups, events) {
-    groups.forEach(function(group, i) {
-      group.selected = state.input.keysDown.current[i.toString()] ? true : false;
+  function highlightRecordings(state, recordings, events) {
+    recordings.forEach(function(recording, i) {
+      recording.selected = state.input.keysDown.current[i.toString()] ? true : false;
     });
 
-    return groups;
+    return recordings;
   };
 
-  function addToGroups(state, groups, events) {
+  function addToRecordings(state, recordings, events) {
     if (state.input.keysDown.current.a && state.input.mouseDown) {
-      if (groups[state.currentGroup] === undefined) {
-        groups[state.currentGroup] = [];
+      if (recordings[state.currentRecording] === undefined) {
+        recordings[state.currentRecording] = new Recording();
       }
 
-      groups[state.currentGroup] = groups[state.currentGroup].concat(
+      recordings[state.currentRecording].addData(
         events
           .filter(isEventType("mousemove"))
-          .map(input.extractPositionFromMouseEvent)
+          .map(function(mouseEvent) {
+            return new Event(input.extractPositionFromMouseEvent(mouseEvent),
+                             "draw",
+                             Date.now());
+          })
       );
 
-      return groups;
+      return recordings;
     } else {
-      return groups;
+      return recordings;
     }
   };
 
@@ -140,9 +168,25 @@
         mouseDown: false,
         mousePosition: { previous: undefined, current: undefined }
       },
-      currentGroup: 1,
-      groups: []
+      currentRecording: 1,
+      recordings: []
     };
+  };
+
+  function Event(data, type, time) {
+    this.data = data;
+    this.type = type;
+    this.time = time;
+  };
+
+  function Recording() {
+    this.data = [];
+  };
+
+  Recording.prototype = {
+    addData: function(extraData) {
+      this.data = this.data.concat(extraData);
+    }
   };
 
   exports.app = {
