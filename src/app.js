@@ -21,16 +21,31 @@
     state.recordings.forEach(_.partial(drawRecording, screen));
   };
 
+  function transposeFrameToCurrentLoop(frameTime, playTime, firstFrameTime, lastFrameTime) {
+    var animationDuration = lastFrameTime - firstFrameTime;
+    var now = Date.now();
+    return now - ((now - playTime) % animationDuration) +
+      frameTime - firstFrameTime;
+  };
+
+  function framesBeingDisplayed(frames, playStart) {
+    return frames.filter(function(event, __, data) {
+      return Date.now() >
+        transposeFrameToCurrentLoop(event.time,
+                                    playStart,
+                                    data[0].time,
+                                    _.last(data).time);
+    });
+  };
+
   function drawRecording(screen, recording) {
     screen.fillStyle = recording.selected ? "red" : "black";
 
     if (recording.playStart !== undefined) {
-      var slowdown = 20;
-      var eventIndex = Math.floor(((Date.now() - recording.playStart) % (recording.data.length * slowdown)) / slowdown);
-
-      recording.data.slice(0, eventIndex).forEach(function(event) {
-        screen.fillRect(event.data.x, event.data.y, 20, 20);
-      });
+      framesBeingDisplayed(recording.data, recording.playStart)
+        .forEach(function(event) {
+          screen.fillRect(event.data.x, event.data.y, 20, 20);
+        });
     } else {
       recording.data.forEach(function(event) {
         screen.fillRect(event.data.x, event.data.y, 20, 20);
