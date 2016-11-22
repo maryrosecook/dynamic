@@ -76,32 +76,27 @@
     return screen;
   };
 
-  function isEventType(type) {
-    return function(mouseEvent) {
-      return mouseEvent.type === type;
-    };
-  };
-
   function clearArray(array) {
     array.splice(0, array.length);
   };
 
   function update(events, state) {
     updateInput(events, state);
-    updateRecordings(events, state);
+    updateRecordings(state);
   };
 
   function updateInput(events, state) {
     state.input = {
       mouseDown: input.isMouseDown(state.input.mouseDown, events),
       keysDown: input.keysDown(state.input.keysDown, events),
-      mousePosition: input.mousePosition(state.input.mousePosition, events)
+      mousePosition: input.mousePosition(state.input.mousePosition, events),
+      mouseMoves: input.mouseMoves(events)
     }
   };
 
-  function updateRecordings(events, state) {
+  function updateRecordings(state) {
     state.currentRecording = currentRecording(state, state.currentRecording);
-    state.recordings = addToRecordings(state, state.recordings, events);
+    state.recordings = addToRecordings(state, state.recordings);
     state.recordings = highlightRecordings(state, state.recordings);
     state.recordings = moveRecording(state, state.recordings);
     state.recordings = toggleRecordingsPlaying(state, state.recordings);
@@ -154,15 +149,14 @@
     return recordings;
   };
 
-  function addToRecordings(state, recordings, events) {
+  function addToRecordings(state, recordings) {
     if (state.input.keysDown.current.a && state.input.mouseDown) {
       if (recordings[state.currentRecording] === undefined) {
         recordings[state.currentRecording] = new Recording();
       }
 
       recordings[state.currentRecording].addData(
-        events
-          .filter(isEventType("mousemove"))
+        state.input.mouseMoves
           .map(function(mouseEvent) {
             return new Event(input.extractPositionFromMouseEvent(mouseEvent),
                              "draw",
@@ -180,8 +174,9 @@
     return {
       keysDown: { previous: {}, current: {} },
       mouseDown: false,
-      mousePosition: { previous: undefined, current: undefined }
-    };
+      mousePosition: { previous: undefined, current: undefined },
+      mouseMoves: []
+     };
   };
 
   function initState() {

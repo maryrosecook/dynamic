@@ -39,6 +39,16 @@
     };
   };
 
+  function isEventType(type) {
+    return function(mouseEvent) {
+      return mouseEvent.type === type;
+    };
+  };
+
+  function mouseMoves(events) {
+    return events.filter(isEventType("mousemove"));
+  };
+
   function mousePosition(previous, events) {
     var lastMouseEvent = _.last(events.filter(function(event) {
       return event.type === "mousemove" ||
@@ -62,6 +72,7 @@
     isMouseDown: isMouseDown,
     keysDown: keysDown,
     mousePosition: mousePosition,
-    extractPositionFromMouseEvent: extractPositionFromMouseEvent
+    extractPositionFromMouseEvent: extractPositionFromMouseEvent,
+    mouseMoves: mouseMoves
   };
 })(this);
