@@ -100,9 +100,9 @@
   };
 
   function updateRecordings(events, state) {
-    state.currentRecording = currentRecording(state, state.currentRecording, events);
+    state.currentRecording = currentRecording(state, state.currentRecording);
     state.recordings = addToRecordings(state, state.recordings, events);
-    state.recordings = highlightRecordings(state, state.recordings, events);
+    state.recordings = highlightRecordings(state, state.recordings);
     state.recordings = moveRecording(state, state.recordings);
     state.recordings = toggleRecordingsPlaying(state, state.recordings);
   };
@@ -140,13 +140,13 @@
     return recordings;
   };
 
-  function currentRecording(state, previousCurrentRecording, events) {
+  function currentRecording(state, previousCurrentRecording) {
     var aGoneUp = state.input.keysDown.previous.a === true &&
         state.input.keysDown.current.a === false;
     return aGoneUp ? previousCurrentRecording + 1 : previousCurrentRecording;
   };
 
-  function highlightRecordings(state, recordings, events) {
+  function highlightRecordings(state, recordings) {
     recordings.forEach(function(recording, i) {
       recording.selected = state.input.keysDown.current[i.toString()] ? true : false;
     });
