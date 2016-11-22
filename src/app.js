@@ -176,13 +176,17 @@
     }
   };
 
+  function initInputData() {
+    return {
+      keysDown: { previous: {}, current: {} },
+      mouseDown: false,
+      mousePosition: { previous: undefined, current: undefined }
+    };
+  };
+
   function initState() {
     return {
-      input: {
-        keysDown: { previous: {}, current: {} },
-        mouseDown: false,
-        mousePosition: { previous: undefined, current: undefined }
-      },
+      input: initInputData(),
       currentRecording: 1,
       recordings: []
     };
