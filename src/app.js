@@ -6,7 +6,8 @@
     var screen = getScreen(window);
 
     (function loopForever() {
-      updateInput(events, inputData);
+      inputData = latestInputData(events, inputData);
+      clearArray(events);
       update(inputData, state);
       draw(state, screen);
       requestAnimationFrame(loopForever);
@@ -81,13 +82,13 @@
     updateRecordings(input, state);
   };
 
-  function updateInput(events, inputData) {
-    inputData.mouseDown = input.isMouseDown(inputData.mouseDown, events);
-    inputData.keysDown = input.keysDown(inputData.keysDown, events);
-    inputData.mousePosition = input.mousePosition(inputData.mousePosition, events);
-    inputData.mouseMoves = input.mouseMoves(events);
-
-    clearArray(events);
+  function latestInputData(events, previousInputData) {
+    return {
+      mouseDown: input.isMouseDown(previousInputData.mouseDown, events),
+      keysDown: input.keysDown(previousInputData.keysDown, events),
+      mousePosition: input.mousePosition(previousInputData.mousePosition, events),
+      mouseMoves: input.mouseMoves(events)
+    };
   };
 
   function updateRecordings(inputData, state) {
