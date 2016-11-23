@@ -14,7 +14,6 @@
   function tick(events, state) {
     updateInput(events, state);
     update(state);
-    clearArray(events);
   };
 
   function draw(state, screen) {
@@ -92,6 +91,8 @@
       mousePosition: input.mousePosition(state.input.mousePosition, events),
       mouseMoves: input.mouseMoves(events)
     }
+
+    clearArray(events);
   };
 
   function updateRecordings(inputData, state) {
