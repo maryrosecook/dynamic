@@ -1,12 +1,13 @@
 ;(function(exports) {
   function start(window) {
     var events = gatherEvents(window);
+    var inputData = initInputData();
     var state = initState();
     var screen = getScreen(window);
 
     (function loopForever() {
-      updateInput(events, state);
-      update(state);
+      updateInput(events, inputData);
+      update(inputData, state);
       draw(state, screen);
       requestAnimationFrame(loopForever);
     })();
@@ -76,17 +77,15 @@
     array.splice(0, array.length);
   };
 
-  function update(state) {
-    updateRecordings(state.input, state);
+  function update(input, state) {
+    updateRecordings(input, state);
   };
 
-  function updateInput(events, state) {
-    state.input = {
-      mouseDown: input.isMouseDown(state.input.mouseDown, events),
-      keysDown: input.keysDown(state.input.keysDown, events),
-      mousePosition: input.mousePosition(state.input.mousePosition, events),
-      mouseMoves: input.mouseMoves(events)
-    }
+  function updateInput(events, inputData) {
+    inputData.mouseDown = input.isMouseDown(inputData.mouseDown, events);
+    inputData.keysDown = input.keysDown(inputData.keysDown, events);
+    inputData.mousePosition = input.mousePosition(inputData.mousePosition, events);
+    inputData.mouseMoves = input.mouseMoves(events);
 
     clearArray(events);
   };
