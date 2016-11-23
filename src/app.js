@@ -26,29 +26,29 @@
       frameTime - firstFrameTime;
   };
 
-  function framesBeingDisplayed(frames, playStart) {
-    return frames.filter(function(event, __, data) {
-      return Date.now() >
-        transposeFrameToCurrentLoop(event.time,
-                                    playStart,
-                                    data[0].time,
-                                    _.last(data).time);
-    });
+  function framesBeingDisplayed(frames, isPlaying, playStart) {
+    if (isPlaying) {
+      return frames.filter(function(event, __, data) {
+        return Date.now() >
+          transposeFrameToCurrentLoop(event.time,
+                                      playStart,
+                                      data[0].time,
+                                      _.last(data).time);
+      });
+    } else {
+      return frames;
+    }
   };
 
   function drawRecording(screen, recording) {
     screen.fillStyle = recording.selected ? "red" : "black";
 
-    if (recording.playStart !== undefined) {
-      framesBeingDisplayed(recording.data, recording.playStart)
-        .forEach(function(event) {
-          screen.fillRect(event.data.x, event.data.y, 20, 20);
-        });
-    } else {
-      recording.data.forEach(function(event) {
+    framesBeingDisplayed(recording.data,
+                         recording.playStart !== undefined,
+                         recording.playStart)
+      .forEach(function(event) {
         screen.fillRect(event.data.x, event.data.y, 20, 20);
       });
-    }
   };
 
   function gatherEvents(window) {
