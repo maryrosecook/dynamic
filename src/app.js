@@ -108,8 +108,8 @@
   };
 
   function toggleRecordingsPlaying(inputData, state) {
-    if (!inputData.keysDown.previous.o &&
-        inputData.keysDown.current.o) {
+    if (!inputData.keysDown.previous.t &&
+        inputData.keysDown.current.t) {
       state.recordings
         .filter(function (recording) { return recording.selected; })
         .forEach(function(recording) {
@@ -142,8 +142,8 @@
 
   function currentRecording(inputData, state) {
     var previousCurrentRecording = state.currentRecording;
-    var aGoneUp = inputData.keysDown.previous.a === true &&
-        inputData.keysDown.current.a === false;
+    var aGoneUp = inputData.keysDown.previous.h === true &&
+        inputData.keysDown.current.h === false;
     var currentRecording = aGoneUp ? previousCurrentRecording + 1 : previousCurrentRecording;
     state.currentRecording = currentRecording;
     return state;
@@ -158,7 +158,7 @@
   };
 
   function addToRecordings(inputData, state) {
-    if (inputData.keysDown.current.a && inputData.mouseDown) {
+    if (inputData.keysDown.current.h && inputData.mouseDown) {
       if (state.recordings[state.currentRecording] === undefined) {
         state.recordings[state.currentRecording] = new Recording();
       }
