@@ -78,8 +78,12 @@
     array.splice(0, array.length);
   };
 
-  function update(input, state) {
-    updateRecordings(input, state);
+  function update(inputData, state) {
+    state.currentRecording = currentRecording(inputData, state.currentRecording);
+    state.recordings = addToRecordings(inputData, state, state.recordings);
+    state.recordings = highlightRecordings(inputData, state.recordings);
+    state.recordings = moveRecording(inputData, state.recordings);
+    state.recordings = toggleRecordingsPlaying(inputData, state.recordings);
   };
 
   function latestInputData(events, previousInputData) {
@@ -89,14 +93,6 @@
       mousePosition: input.mousePosition(previousInputData.mousePosition, events),
       mouseMoves: input.mouseMoves(events)
     };
-  };
-
-  function updateRecordings(inputData, state) {
-    state.currentRecording = currentRecording(inputData, state.currentRecording);
-    state.recordings = addToRecordings(inputData, state, state.recordings);
-    state.recordings = highlightRecordings(inputData, state.recordings);
-    state.recordings = moveRecording(inputData, state.recordings);
-    state.recordings = toggleRecordingsPlaying(inputData, state.recordings);
   };
 
   function toggleRecordingsPlaying(inputData, recordings) {
