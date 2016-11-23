@@ -82,7 +82,7 @@
 
   function update(events, state) {
     updateInput(events, state);
-    updateRecordings(state);
+    updateRecordings(state.input, state);
   };
 
   function updateInput(events, state) {
@@ -94,17 +94,17 @@
     }
   };
 
-  function updateRecordings(state) {
-    state.currentRecording = currentRecording(state, state.currentRecording);
-    state.recordings = addToRecordings(state, state.recordings);
-    state.recordings = highlightRecordings(state, state.recordings);
-    state.recordings = moveRecording(state, state.recordings);
-    state.recordings = toggleRecordingsPlaying(state, state.recordings);
+  function updateRecordings(inputData, state) {
+    state.currentRecording = currentRecording(inputData, state.currentRecording);
+    state.recordings = addToRecordings(inputData, state, state.recordings);
+    state.recordings = highlightRecordings(inputData, state.recordings);
+    state.recordings = moveRecording(inputData, state.recordings);
+    state.recordings = toggleRecordingsPlaying(inputData, state.recordings);
   };
 
-  function toggleRecordingsPlaying(state, recordings) {
-    if (!state.input.keysDown.previous.o &&
-        state.input.keysDown.current.o) {
+  function toggleRecordingsPlaying(inputData, recordings) {
+    if (!inputData.keysDown.previous.o &&
+        inputData.keysDown.current.o) {
       recordings
         .filter(function (recording) { return recording.selected; })
         .forEach(function(recording) {
@@ -115,11 +115,11 @@
     return recordings;
   };
 
-  function moveRecording(state, recordings) {
-    if (state.input.mouseDown) {
+  function moveRecording(inputData, recordings) {
+    if (inputData.mouseDown) {
       var movement = {
-        x: state.input.mousePosition.current.x - state.input.mousePosition.previous.x,
-        y: state.input.mousePosition.current.y - state.input.mousePosition.previous.y
+        x: inputData.mousePosition.current.x - inputData.mousePosition.previous.x,
+        y: inputData.mousePosition.current.y - inputData.mousePosition.previous.y
       };
 
       recordings
@@ -135,28 +135,28 @@
     return recordings;
   };
 
-  function currentRecording(state, previousCurrentRecording) {
-    var aGoneUp = state.input.keysDown.previous.a === true &&
-        state.input.keysDown.current.a === false;
+  function currentRecording(inputData, previousCurrentRecording) {
+    var aGoneUp = inputData.keysDown.previous.a === true &&
+        inputData.keysDown.current.a === false;
     return aGoneUp ? previousCurrentRecording + 1 : previousCurrentRecording;
   };
 
-  function highlightRecordings(state, recordings) {
+  function highlightRecordings(inputData, recordings) {
     recordings.forEach(function(recording, i) {
-      recording.selected = state.input.keysDown.current[i.toString()] ? true : false;
+      recording.selected = inputData.keysDown.current[i.toString()] ? true : false;
     });
 
     return recordings;
   };
 
-  function addToRecordings(state, recordings) {
-    if (state.input.keysDown.current.a && state.input.mouseDown) {
+  function addToRecordings(inputData, state, recordings) {
+    if (inputData.keysDown.current.a && inputData.mouseDown) {
       if (recordings[state.currentRecording] === undefined) {
         recordings[state.currentRecording] = new Recording();
       }
 
       recordings[state.currentRecording].addData(
-        state.input.mouseMoves
+        inputData.mouseMoves
           .map(function(mouseEvent) {
             return new Event(input.extractPositionFromMouseEvent(mouseEvent),
                              "draw",
