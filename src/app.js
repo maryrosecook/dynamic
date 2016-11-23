@@ -5,15 +5,11 @@
     var screen = getScreen(window);
 
     (function loopForever() {
-      tick(events, state);
+      updateInput(events, state);
+      update(state);
       draw(state, screen);
       requestAnimationFrame(loopForever);
     })();
-  };
-
-  function tick(events, state) {
-    updateInput(events, state);
-    update(state);
   };
 
   function draw(state, screen) {
