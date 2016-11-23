@@ -12,7 +12,8 @@
   };
 
   function tick(events, state) {
-    update(events.concat(), state);
+    updateInput(events, state);
+    update(state);
     clearArray(events);
   };
 
@@ -80,8 +81,7 @@
     array.splice(0, array.length);
   };
 
-  function update(events, state) {
-    updateInput(events, state);
+  function update(state) {
     updateRecordings(state.input, state);
   };
 
