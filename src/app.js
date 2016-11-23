@@ -79,11 +79,23 @@
   };
 
   function update(inputData, state) {
-    state.currentRecording = currentRecording(inputData, state.currentRecording);
-    state.recordings = addToRecordings(inputData, state, state.recordings);
-    state.recordings = highlightRecordings(inputData, state.recordings);
-    state.recordings = moveRecording(inputData, state.recordings);
-    state.recordings = toggleRecordingsPlaying(inputData, state.recordings);
+    function pipelineInputDataAndState(inputData, state, fns) {
+      if (fns.length === 0) {
+        return state;
+      } else {
+        return pipelineInputDataAndState(inputData,
+                                         fns[0](inputData, state),
+                                         fns.slice(1));
+      }
+    };
+
+    return pipelineInputDataAndState(inputData, state, [
+      currentRecording,
+      addToRecordings,
+      highlightRecordings,
+      moveRecording,
+      toggleRecordingsPlaying
+    ]);
   };
 
   function latestInputData(events, previousInputData) {
@@ -95,27 +107,27 @@
     };
   };
 
-  function toggleRecordingsPlaying(inputData, recordings) {
+  function toggleRecordingsPlaying(inputData, state) {
     if (!inputData.keysDown.previous.o &&
         inputData.keysDown.current.o) {
-      recordings
+      state.recordings
         .filter(function (recording) { return recording.selected; })
         .forEach(function(recording) {
           recording.playStart = recording.playStart === undefined ? Date.now() : undefined;
         });
     }
 
-    return recordings;
+    return state;
   };
 
-  function moveRecording(inputData, recordings) {
+  function moveRecording(inputData, state) {
     if (inputData.mouseDown) {
       var movement = {
         x: inputData.mousePosition.current.x - inputData.mousePosition.previous.x,
         y: inputData.mousePosition.current.y - inputData.mousePosition.previous.y
       };
 
-      recordings
+      state.recordings
         .filter(function (recording) { return recording.selected; })
         .forEach(function(recording) {
           recording.data.forEach(function(event) {
@@ -125,30 +137,33 @@
         });
     }
 
-    return recordings;
+    return state;
   };
 
-  function currentRecording(inputData, previousCurrentRecording) {
+  function currentRecording(inputData, state) {
+    var previousCurrentRecording = state.currentRecording;
     var aGoneUp = inputData.keysDown.previous.a === true &&
         inputData.keysDown.current.a === false;
-    return aGoneUp ? previousCurrentRecording + 1 : previousCurrentRecording;
+    var currentRecording = aGoneUp ? previousCurrentRecording + 1 : previousCurrentRecording;
+    state.currentRecording = currentRecording;
+    return state;
   };
 
-  function highlightRecordings(inputData, recordings) {
-    recordings.forEach(function(recording, i) {
+  function highlightRecordings(inputData, state) {
+    state.recordings.forEach(function(recording, i) {
       recording.selected = inputData.keysDown.current[i.toString()] ? true : false;
     });
 
-    return recordings;
+    return state;
   };
 
-  function addToRecordings(inputData, state, recordings) {
+  function addToRecordings(inputData, state) {
     if (inputData.keysDown.current.a && inputData.mouseDown) {
-      if (recordings[state.currentRecording] === undefined) {
-        recordings[state.currentRecording] = new Recording();
+      if (state.recordings[state.currentRecording] === undefined) {
+        state.recordings[state.currentRecording] = new Recording();
       }
 
-      recordings[state.currentRecording].addData(
+      state.recordings[state.currentRecording].addData(
         inputData.mouseMoves
           .map(function(mouseEvent) {
             return new Event(input.extractPositionFromMouseEvent(mouseEvent),
@@ -156,11 +171,9 @@
                              Date.now());
           })
       );
-
-      return recordings;
-    } else {
-      return recordings;
     }
+
+    return state;
   };
 
   function initInputData() {
