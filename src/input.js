@@ -1,4 +1,10 @@
 ;(function(exports) {
+  var KEY_CODE_TO_KEY = {
+    16: "SHIFT",
+    18: "OPTION",
+    91: "COMMAND"
+  };
+
   function isMouseDown(previous, events) {
     var mouseEvent = latestMouseUpDownEvent(events);
     if (mouseEvent) {
@@ -24,7 +30,9 @@
                               .filter(function(event) {
                                 return event.type === "keydown" || event.type === "keyup";
                               }), function(event) {
-                                return event.key;
+                                return event.keyCode in KEY_CODE_TO_KEY ?
+                                  KEY_CODE_TO_KEY[event.keyCode] :
+                                  event.key;
                               });
 
     var newKeyValues = _.mapObject(keyEvents, function(value, key) {
