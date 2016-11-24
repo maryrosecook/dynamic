@@ -14,6 +14,11 @@
     })();
   };
 
+  var KEYS = {
+    RECORD: "SHIFT",
+    PLAY: "OPTION"
+  };
+
   function draw(state, screen) {
     screen.clearRect(0, 0, screen.canvas.width, screen.canvas.height);
     state.recordings.forEach(_.partial(drawRecording, screen));
@@ -108,8 +113,8 @@
   };
 
   function toggleRecordingsPlaying(inputData, state) {
-    if (!inputData.keysDown.previous.t &&
-        inputData.keysDown.current.t) {
+    if (!inputData.keysDown.previous[KEYS.PLAY] &&
+        inputData.keysDown.current[KEYS.PLAY]) {
       state.recordings
         .filter(function (recording) { return recording.selected; })
         .forEach(function(recording) {
@@ -142,8 +147,8 @@
 
   function currentRecording(inputData, state) {
     var previousCurrentRecording = state.currentRecording;
-    var aGoneUp = inputData.keysDown.previous.h === true &&
-        inputData.keysDown.current.h === false;
+    var aGoneUp = inputData.keysDown.previous[KEYS.RECORD] === true &&
+        inputData.keysDown.current[KEYS.RECORD] === false;
     var currentRecording = aGoneUp ? previousCurrentRecording + 1 : previousCurrentRecording;
     state.currentRecording = currentRecording;
     return state;
@@ -158,7 +163,7 @@
   };
 
   function addToRecordings(inputData, state) {
-    if (inputData.keysDown.current.h && inputData.mouseDown) {
+    if (inputData.keysDown.current[KEYS.RECORD] && inputData.mouseDown) {
       if (state.recordings[state.currentRecording] === undefined) {
         state.recordings[state.currentRecording] = new Recording();
       }
