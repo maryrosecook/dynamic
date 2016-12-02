@@ -95,11 +95,11 @@
     };
 
     return pipelineInputDataAndState(inputData, state, [
-      currentRecording,
-      addToRecordings,
-      highlightRecordings,
-      moveRecording,
-      toggleRecordingsPlaying
+      updateSetCurrentRecording,
+      updateAddToRecordings,
+      updateHighlightRecordings,
+      updateMoveRecording,
+      updateToggleRecordingsPlaying
     ]);
   };
 
@@ -112,7 +112,7 @@
     };
   };
 
-  function toggleRecordingsPlaying(inputData, state) {
+  function updateToggleRecordingsPlaying(inputData, state) {
     if (!inputData.keysDown.previous[KEYS.PLAY] &&
         inputData.keysDown.current[KEYS.PLAY]) {
       state.recordings
@@ -125,7 +125,7 @@
     return state;
   };
 
-  function moveRecording(inputData, state) {
+  function updateMoveRecording(inputData, state) {
     if (inputData.mouseDown) {
       var movement = {
         x: inputData.mousePosition.current.x - inputData.mousePosition.previous.x,
@@ -145,7 +145,7 @@
     return state;
   };
 
-  function currentRecording(inputData, state) {
+  function updateSetCurrentRecording(inputData, state) {
     var previousCurrentRecording = state.currentRecording;
     var aGoneUp = inputData.keysDown.previous[KEYS.RECORD] === true &&
         inputData.keysDown.current[KEYS.RECORD] === false;
@@ -154,7 +154,7 @@
     return state;
   };
 
-  function highlightRecordings(inputData, state) {
+  function updateHighlightRecordings(inputData, state) {
     state.recordings.forEach(function(recording, i) {
       recording.selected = inputData.keysDown.current[i.toString()] ? true : false;
     });
@@ -162,7 +162,7 @@
     return state;
   };
 
-  function addToRecordings(inputData, state) {
+  function updateAddToRecordings(inputData, state) {
     if (inputData.keysDown.current[KEYS.RECORD] && inputData.mouseDown) {
       if (state.recordings[state.currentRecording] === undefined) {
         state.recordings[state.currentRecording] = new Recording();
