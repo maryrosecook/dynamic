@@ -187,7 +187,7 @@
       mouseDown: false,
       mousePosition: { previous: undefined, current: undefined },
       mouseMoves: []
-     };
+    };
   };
 
   function initState() {
