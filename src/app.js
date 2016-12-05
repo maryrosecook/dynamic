@@ -15,42 +15,37 @@
   };
 
   var KEYS = {
-    RECORD: "SHIFT",
-    PLAY: "OPTION"
+    RECORD: "SHIFT"
   };
 
   function draw(state, screen) {
-    screen.clearRect(0, 0, screen.canvas.width, screen.canvas.height);
+    screen.clearRect(0,
+                     0,
+                     screen.canvas.width,
+                     screen.canvas.height);
     state.recordings.forEach(_.partial(drawRecording, screen));
   };
 
-  function transposeFrameToCurrentLoop(frameTime, playTime, firstFrameTime, lastFrameTime) {
-    var animationDuration = lastFrameTime - firstFrameTime;
-    var now = Date.now();
-    return now - ((now - playTime) % animationDuration) +
-      frameTime - firstFrameTime;
-  };
-
-  function framesBeingDisplayed(frames, isPlaying, playStart) {
-    if (isPlaying) {
-      return frames.filter(function(event, __, data) {
-        return Date.now() >
-          transposeFrameToCurrentLoop(event.time,
-                                      playStart,
-                                      data[0].time,
-                                      _.last(data).time);
-      });
-    } else {
-      return frames;
+  function framesBeingDisplayed(frames) {
+    if (frames.length === 0) {
+      return [];
     }
+
+    var now = Date.now();
+    return frames.filter(function(event, __, frames) {
+      return now >
+        timeline.transposeFrameTimeToCurrentLoop(
+          now,
+          event.time,
+          frames[0].time,
+          _.last(frames).time);
+    });
   };
 
   function drawRecording(screen, recording) {
     screen.fillStyle = recording.selected ? "red" : "black";
 
-    framesBeingDisplayed(recording.data,
-                         recording.playStart !== undefined,
-                         recording.playStart)
+    framesBeingDisplayed(recording.data)
       .forEach(function(event) {
         screen.fillRect(event.data.x, event.data.y, 20, 20);
       });
@@ -98,31 +93,19 @@
       updateSetCurrentRecording,
       updateAddToRecordings,
       updateHighlightRecordings,
-      updateMoveRecording,
-      updateToggleRecordingsPlaying
+      updateMoveRecording
     ]);
   };
 
   function latestInputData(events, previousInputData) {
     return {
-      mouseDown: input.isMouseDown(previousInputData.mouseDown, events),
+      mouseDown: input.isMouseDown(
+        previousInputData.mouseDown, events),
       keysDown: input.keysDown(previousInputData.keysDown, events),
-      mousePosition: input.mousePosition(previousInputData.mousePosition, events),
+      mousePosition: input.mousePosition(
+        previousInputData.mousePosition, events),
       mouseMoves: input.mouseMoves(events)
     };
-  };
-
-  function updateToggleRecordingsPlaying(inputData, state) {
-    if (!inputData.keysDown.previous[KEYS.PLAY] &&
-        inputData.keysDown.current[KEYS.PLAY]) {
-      state.recordings
-        .filter(function (recording) { return recording.selected; })
-        .forEach(function(recording) {
-          recording.playStart = recording.playStart === undefined ? Date.now() : undefined;
-        });
-    }
-
-    return state;
   };
 
   function updateMoveRecording(inputData, state) {
