@@ -179,7 +179,6 @@
 
   function initState() {
     return {
-      input: initInputData(),
       currentRecording: 1,
       recordings: []
     };
