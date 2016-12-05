@@ -4,6 +4,7 @@
     var inputData = initInputData();
     var state = initState();
     var screen = setupScreen(window);
+    ui.setup(document);
 
     (function loopForever() {
       inputData = latestInputData(events, inputData);
