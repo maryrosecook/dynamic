@@ -26,26 +26,26 @@
     state.recordings.forEach(_.partial(drawRecording, screen));
   };
 
-  function framesBeingDisplayed(frames) {
-    if (frames.length === 0) {
-      return [];
-    }
+  // function framesBeingDisplayed(frames) {
+  //   if (frames.length === 0) {
+  //     return [];
+  //   }
 
-    var now = Date.now();
-    return frames.filter(function(event, __, frames) {
-      return now >
-        timeline.transposeFrameTimeToCurrentLoop(
-          now,
-          event.time,
-          frames[0].time,
-          _.last(frames).time);
-    });
-  };
+  //   var now = Date.now();
+  //   return frames.filter(function(event, __, frames) {
+  //     return now >
+  //       timeline.transposeFrameTimeToCurrentLoop(
+  //         now,
+  //         event.time,
+  //         frames[0].time,
+  //         _.last(frames).time);
+  //   });
+  // };
 
   function drawRecording(screen, recording) {
     screen.fillStyle = recording.selected ? "red" : "black";
 
-    framesBeingDisplayed(recording.data)
+    recording.data
       .forEach(function(event) {
         screen.fillRect(event.data.x, event.data.y, 20, 20);
       });
