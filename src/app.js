@@ -3,7 +3,7 @@
     var events = gatherEvents(window);
     var inputData = initInputData();
     var state = initState();
-    var screen = getScreen(window);
+    var screen = setupScreen(window);
 
     (function loopForever() {
       inputData = latestInputData(events, inputData);
@@ -67,8 +67,11 @@
     });
   };
 
-  function getScreen(window) {
-    var screen = window.document.getElementById("screen").getContext("2d");
+  function setupScreen(window) {
+    var screen = window
+        .document
+        .getElementById("screen")
+        .getContext("2d");
     screen.canvas.width = window.innerWidth;
     screen.canvas.height = window.innerHeight;
     return screen;
