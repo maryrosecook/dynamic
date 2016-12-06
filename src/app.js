@@ -9,6 +9,7 @@
     (function loopForever() {
       inputData = latestInputData(events, inputData);
       clearArray(events);
+      state = updateSelection(inputData, state);
       state = update(inputData, state);
       draw(state, screen);
       requestAnimationFrame(loopForever);
@@ -20,21 +21,37 @@
   };
 
   var plugins = {
-    red: red
+    blue: blue
   };
+
+  var groupSelectors = _.range(0, 9)
+      .map(function(groupNumber) {
+        return groupSelector(groupNumber);
+      });
 
   function draw(state, screen) {
     screen.clearRect(0,
                      0,
                      screen.canvas.width,
                      screen.canvas.height);
-    state.data.forEach(_.partial(drawDatum, screen));
+    state.data.forEach(_.partial(drawDatum, screen, state));
   };
 
-  function drawDatum(screen, datum) {
+  function isSelected(datum, selectorFunctions) {
+    return selectorFunctions.length > 0 &&
+      _.every(selectorFunctions, function(selectorFunction) {
+        return selectorFunction(datum) === true;
+      });
+  };
+
+  function drawDatum(screen, state, datum) {
     var reducedDatum = applyDatumFunctions(datum);
-    screen.fillStyle = reducedDatum.color;
-    screen.fillRect(reducedDatum.x, reducedDatum.y, 2, 2);
+    var color = isSelected(datum, state.selectorFunctions) ?
+        "red" :
+        reducedDatum.color;
+
+    screen.fillStyle = color;
+    screen.fillRect(reducedDatum.x, reducedDatum.y, 3, 3);
   };
 
   function applyDatumFunctions(datum) {
@@ -86,11 +103,28 @@
     };
 
     return pipelineInputDataAndState(inputData, state, [
-      // updateSetCurrentPiece,
-      updateAddData
-      // updateHighlightPieces,
-      // updateMovePiece
+      updateSetCurrentGroup,
+      updateAddData,
     ]);
+  };
+
+  function updateSelection(inputData, state) {
+    return groupSelectors.reduce(function(state, groupSelector, i) {
+      var groupKey = i.toString();
+      var groupSelector = groupSelectors[i];
+      if (inputData.keysDown.current[groupKey] === true &&
+          !_.contains(state.selectorFunctions, groupSelector)) {
+        state.selectorFunctions.push(groupSelector);
+      } else if (inputData.keysDown.previous[groupKey] === true &&
+                 inputData.keysDown.current[groupKey] === false) {
+        state.selectorFunctions =
+          _.without(state.selectorFunctions, groupSelector);
+      }
+
+      return state;
+    }, state);
+
+    return state;
   };
 
   function latestInputData(events, previousInputData) {
@@ -107,12 +141,12 @@
     };
   };
 
-  function updateSetCurrentPiece(inputData, state) {
-    var previousCurrentPiece = state.currentPiece;
+  function updateSetCurrentGroup(inputData, state) {
+    var previousCurrentGroup = state.currentGroup;
     var aGoneUp = inputData.keysDown.previous[KEYS.RECORD] === true &&
         inputData.keysDown.current[KEYS.RECORD] === false;
-    var currentPiece = aGoneUp ? previousCurrentPiece + 1 : previousCurrentPiece;
-    state.currentPiece = currentPiece;
+    var currentGroup = aGoneUp ? previousCurrentGroup + 1 : previousCurrentGroup;
+    state.currentGroup = currentGroup;
 
     return state;
   };
@@ -124,8 +158,9 @@
       return state;
     }
 
-    var a =  {
-      currentPiece: state.currentPiece,
+    return {
+      currentGroup: state.currentGroup,
+      selectorFunctions: state.selectorFunctions,
       data: state.data.concat(
         inputData.mouseMoves
           .map(function(mouseEvent) {
@@ -135,13 +170,13 @@
               x: position.x,
               y: position.y,
               type: "draw",
-              time: Date.now()
+              time: Date.now(),
+              group: state.currentGroup,
+              color: "black"
             });
           })
       )
     };
-
-    return a
   };
 
   function createDatum(obj) {
@@ -160,22 +195,9 @@
 
   function initState() {
     return {
-      currentPiece: 1,
-      data: []
-    };
-  };
-
-  function createPiece(data) {
-    return {
-      data: data,
-      functions: []
-    }
-  };
-
-  function addDataToPiece(piece, data) {
-    return {
-      data: piece.data.concat(data),
-      functions: piece.functions
+      currentGroup: 1,
+      data: [],
+      selectorFunctions: []
     };
   };
 
@@ -189,32 +211,3 @@
     start: start
   };
 })(this);
-
-
-  // function updateHighlightPieces(inputData, state) {
-  //   state.pieces.forEach(function(piece, i) {
-  //     piece.selected = inputData.keysDown.current[i.toString()] ? true : false;
-  //   });
-
-  //   return state;
-  // };
-
-  // function updateMovePiece(inputData, state) {
-  //   if (inputData.mouseDown) {
-  //     var movement = {
-  //       x: inputData.mousePosition.current.x - inputData.mousePosition.previous.x,
-  //       y: inputData.mousePosition.current.y - inputData.mousePosition.previous.y
-  //     };
-
-  //     state.pieces
-  //       .filter(function (piece) { return piece.selected; })
-  //       .forEach(function(piece) {
-  //         data.forEach(function(event) {
-  //           event.x += movement.x;
-  //           event.y += movement.y;
-  //         });
-  //       });
-  //   }
-
-  //   return state;
-  // };

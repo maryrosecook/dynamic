@@ -2,7 +2,17 @@
   var KEY_CODE_TO_KEY = {
     16: "SHIFT",
     18: "OPTION",
-    91: "COMMAND"
+    91: "COMMAND",
+    48: "0",
+    49: "1",
+    50: "2",
+    51: "3",
+    52: "4",
+    53: "5",
+    54: "6",
+    55: "7",
+    56: "8",
+    57: "9"
   };
 
   function isMouseDown(previous, events) {
