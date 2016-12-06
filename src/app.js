@@ -14,10 +14,6 @@
     })();
   };
 
-  var KEYS = {
-    RECORD: "SHIFT"
-  };
-
   var plugins = {
     blue: blue
   };
