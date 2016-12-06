@@ -1,17 +1,15 @@
 ;(function(exports) {
   function start(window) {
     var buttons = setupButtons(document, Object.keys(plugins));
-    var events = gatherEvents(window, buttons);
-    var inputData = initInputData();
     var state = initState();
     var screen = setupScreen(window);
+    var inputter = new Inputter(window);
 
     (function loopForever() {
-      inputData = latestInputData(events, inputData);
-      clearArray(events);
-      state = updateSelection(inputData, state);
-      state = update(inputData, state);
+      state = updateSelection(inputter, state);
+      state = update(inputter, state);
       draw(state, screen);
+      inputter.update();
       requestAnimationFrame(loopForever);
     })();
   };
@@ -60,23 +58,6 @@
       .reduce(function(latestDatum, fn) { return fn(latestDatum); }, datum);
   };
 
-  function gatherEvents(window, uiButtons) {
-    var events = [];
-    collectEvents("mousemove", events, window);
-    collectEvents("mousedown", events, window);
-    collectEvents("mouseup", events, window);
-    collectEvents("keydown", events, window);
-    collectEvents("keyup", events, window);
-    uiButtons.forEach(_.partial(collectEvents, "click", events));
-    return events;
-  };
-
-  function collectEvents(eventName, events, element) {
-    element.addEventListener(eventName, function(event) {
-      events.push(event);
-    });
-  };
-
   function setupScreen(window) {
     var screen = window
         .document
@@ -87,36 +68,30 @@
     return screen;
   };
 
-  function clearArray(array) {
-    array.splice(0, array.length);
-  };
-
-  function update(inputData, state) {
-    function pipelineInputDataAndState(inputData, state, fns) {
+  function update(inputter, state) {
+    function pipelineInputDataAndState(inputter, state, fns) {
       if (fns.length === 0) {
         return state;
       } else {
-        return pipelineInputDataAndState(inputData,
-                                         fns[0](inputData, state),
+        return pipelineInputDataAndState(inputter,
+                                         fns[0](inputter, state),
                                          fns.slice(1));
       }
     };
 
-    return pipelineInputDataAndState(inputData, state, [
+    return pipelineInputDataAndState(inputter, state, [
       updateSetCurrentGroup,
       updateAddData,
     ]);
   };
 
-  function updateSelection(inputData, state) {
+  function updateSelection(inputter, state) {
     return groupSelectors.reduce(function(state, groupSelector, i) {
-      var groupKey = i.toString();
       var groupSelector = groupSelectors[i];
-      if (inputData.keysDown.current[groupKey] === true &&
+      if (inputter.isPressed(inputter[i]) &&
           !_.contains(state.selectorFunctions, groupSelector)) {
         state.selectorFunctions.push(groupSelector);
-      } else if (inputData.keysDown.previous[groupKey] === true &&
-                 inputData.keysDown.current[groupKey] === false) {
+      } else if (inputter.isUnpressed(inputter[i])) {
         state.selectorFunctions =
           _.without(state.selectorFunctions, groupSelector);
       }
@@ -127,70 +102,38 @@
     return state;
   };
 
-  function latestInputData(events, previousInputData) {
-    return {
-      mouseDown: input.isMouseDown(
-        previousInputData.mouseDown, events),
-      keysDown: input.keysDown(previousInputData.keysDown, events),
-      mousePosition: input.mousePosition(
-        previousInputData.mousePosition, events),
-      mouseMoves: input.mouseMoves(events),
-      uiButtonClicks: events.filter(function(event) {
-        return event.type === "click";
-      })
-    };
-  };
-
-  function updateSetCurrentGroup(inputData, state) {
-    var previousCurrentGroup = state.currentGroup;
-    var aGoneUp = inputData.keysDown.previous[KEYS.RECORD] === true &&
-        inputData.keysDown.current[KEYS.RECORD] === false;
-    var currentGroup = aGoneUp ? previousCurrentGroup + 1 : previousCurrentGroup;
-    state.currentGroup = currentGroup;
+  function updateSetCurrentGroup(inputter, state) {
+    state.currentGroup = inputter.isUnpressed(inputter.SHIFT) ?
+      state.currentGroup + 1 :
+      state.currentGroup;
 
     return state;
   };
 
-  function updateAddData(inputData, state) {
-    if (!inputData.keysDown.current[KEYS.RECORD] ||
-        !inputData.mouseDown ||
-        inputData.mouseMoves.length === 0) {
+  function updateAddData(inputter, state) {
+    if (!inputter.isDown(inputter.SHIFT) ||
+        !inputter.isDown(inputter.LEFT_MOUSE)) {
       return state;
     }
 
+    var mousePosition = inputter.getMousePosition();
     return {
       currentGroup: state.currentGroup,
       selectorFunctions: state.selectorFunctions,
       data: state.data.concat(
-        inputData.mouseMoves
-          .map(function(mouseEvent) {
-            var position = input
-                .extractPositionFromMouseEvent(mouseEvent);
-            return createDatum({
-              x: position.x,
-              y: position.y,
-              type: "draw",
-              time: Date.now(),
-              group: state.currentGroup,
-              color: "black"
-            });
-          })
-      )
+        createDatum({
+          x: mousePosition.x,
+          y: mousePosition.y,
+          type: "draw",
+          time: Date.now(),
+          group: state.currentGroup,
+          color: "black"
+        }))
     };
   };
 
   function createDatum(obj) {
     return _.extend(copyEvent(obj), { functions: [] });
-  };
-
-  function initInputData() {
-    return {
-      keysDown: { previous: {}, current: {} },
-      mouseDown: false,
-      mousePosition: { previous: undefined, current: undefined },
-      mouseMoves: [],
-      uiButtonClicks: []
-    };
   };
 
   function initState() {
