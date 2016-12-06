@@ -1,27 +1,19 @@
 ;(function(global) {
-  function setup(document) {
-    var buttonContainer = createButtonContainer();
-    dom.appendChild(document.body, buttonContainer);
-
-    dom.appendChild(buttonContainer,
-                    dom.addEventListener(createButton("green"),
-                                         "click", function() {
-                                           console.log("green!")
-                                         }));
+  function createPanel(document, body) {
+    return dom.appendChild(
+      body,
+      dom.createElement(document, "div"));
   };
 
-  function createButton(text) {
-    return dom.setInnerHtml(dom.createElement(document, "button"),
-                            text);
-  };
-
-  function createButtonContainer() {
-    var buttonContainerId = "buttons";
-    return dom.setId(dom.createElement(document, "div"),
-                     buttonContainerId);
+  function addButton(panel, text) {
+    return dom.appendChild(
+      panel,
+      dom.setInnerHtml(dom.createElement(document, "button"),
+                       text));
   };
 
   global.ui = {
-    setup: setup
+    createPanel: createPanel,
+    addButton: addButton
   };
 })(this);

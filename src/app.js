@@ -1,15 +1,15 @@
 ;(function(exports) {
   function start(window) {
-    var events = gatherEvents(window);
+    var buttons = setupButtons(document, Object.keys(plugins));
+    var events = gatherEvents(window, buttons);
     var inputData = initInputData();
     var state = initState();
     var screen = setupScreen(window);
-    ui.setup(document);
 
     (function loopForever() {
       inputData = latestInputData(events, inputData);
       clearArray(events);
-      update(inputData, state);
+      state = update(inputData, state);
       draw(state, screen);
       requestAnimationFrame(loopForever);
     })();
@@ -19,51 +19,43 @@
     RECORD: "SHIFT"
   };
 
+  var plugins = {
+    red: red
+  };
+
   function draw(state, screen) {
     screen.clearRect(0,
                      0,
                      screen.canvas.width,
                      screen.canvas.height);
-    state.recordings.forEach(_.partial(drawRecording, screen));
+    state.data.forEach(_.partial(drawDatum, screen));
   };
 
-  // function framesBeingDisplayed(frames) {
-  //   if (frames.length === 0) {
-  //     return [];
-  //   }
-
-  //   var now = Date.now();
-  //   return frames.filter(function(event, __, frames) {
-  //     return now >
-  //       timeline.transposeFrameTimeToCurrentLoop(
-  //         now,
-  //         event.time,
-  //         frames[0].time,
-  //         _.last(frames).time);
-  //   });
-  // };
-
-  function drawRecording(screen, recording) {
-    screen.fillStyle = recording.selected ? "red" : "black";
-
-    recording.data
-      .forEach(function(event) {
-        screen.fillRect(event.data.x, event.data.y, 20, 20);
-      });
+  function drawDatum(screen, datum) {
+    var reducedDatum = applyDatumFunctions(datum);
+    screen.fillStyle = reducedDatum.color;
+    screen.fillRect(reducedDatum.x, reducedDatum.y, 2, 2);
   };
 
-  function gatherEvents(window) {
+  function applyDatumFunctions(datum) {
+    return datum
+      .functions
+      .reduce(function(latestDatum, fn) { return fn(latestDatum); }, datum);
+  };
+
+  function gatherEvents(window, uiButtons) {
     var events = [];
-    collectEvents(window, "mousemove", events);
-    collectEvents(window, "mousedown", events);
-    collectEvents(window, "mouseup", events);
-    collectEvents(window, "keydown", events);
-    collectEvents(window, "keyup", events);
+    collectEvents("mousemove", events, window);
+    collectEvents("mousedown", events, window);
+    collectEvents("mouseup", events, window);
+    collectEvents("keydown", events, window);
+    collectEvents("keyup", events, window);
+    uiButtons.forEach(_.partial(collectEvents, "click", events));
     return events;
   };
 
-  function collectEvents(window, eventName, events) {
-    window.addEventListener(eventName, function(event) {
+  function collectEvents(eventName, events, element) {
+    element.addEventListener(eventName, function(event) {
       events.push(event);
     });
   };
@@ -74,7 +66,7 @@
         .getElementById("screen")
         .getContext("2d");
     screen.canvas.width = window.innerWidth;
-    screen.canvas.height = window.innerHeight;
+    screen.canvas.height = window.innerHeight - 30;
     return screen;
   };
 
@@ -94,10 +86,10 @@
     };
 
     return pipelineInputDataAndState(inputData, state, [
-      updateSetCurrentRecording,
-      updateAddToRecordings,
-      updateHighlightRecordings,
-      updateMoveRecording
+      // updateSetCurrentPiece,
+      updateAddData
+      // updateHighlightPieces,
+      // updateMovePiece
     ]);
   };
 
@@ -108,64 +100,52 @@
       keysDown: input.keysDown(previousInputData.keysDown, events),
       mousePosition: input.mousePosition(
         previousInputData.mousePosition, events),
-      mouseMoves: input.mouseMoves(events)
+      mouseMoves: input.mouseMoves(events),
+      uiButtonClicks: events.filter(function(event) {
+        return event.type === "click";
+      })
     };
   };
 
-  function updateMoveRecording(inputData, state) {
-    if (inputData.mouseDown) {
-      var movement = {
-        x: inputData.mousePosition.current.x - inputData.mousePosition.previous.x,
-        y: inputData.mousePosition.current.y - inputData.mousePosition.previous.y
-      };
-
-      state.recordings
-        .filter(function (recording) { return recording.selected; })
-        .forEach(function(recording) {
-          recording.data.forEach(function(event) {
-            event.data.x += movement.x;
-            event.data.y += movement.y;
-          });
-        });
-    }
-
-    return state;
-  };
-
-  function updateSetCurrentRecording(inputData, state) {
-    var previousCurrentRecording = state.currentRecording;
+  function updateSetCurrentPiece(inputData, state) {
+    var previousCurrentPiece = state.currentPiece;
     var aGoneUp = inputData.keysDown.previous[KEYS.RECORD] === true &&
         inputData.keysDown.current[KEYS.RECORD] === false;
-    var currentRecording = aGoneUp ? previousCurrentRecording + 1 : previousCurrentRecording;
-    state.currentRecording = currentRecording;
-    return state;
-  };
-
-  function updateHighlightRecordings(inputData, state) {
-    state.recordings.forEach(function(recording, i) {
-      recording.selected = inputData.keysDown.current[i.toString()] ? true : false;
-    });
+    var currentPiece = aGoneUp ? previousCurrentPiece + 1 : previousCurrentPiece;
+    state.currentPiece = currentPiece;
 
     return state;
   };
 
-  function updateAddToRecordings(inputData, state) {
-    if (inputData.keysDown.current[KEYS.RECORD] && inputData.mouseDown) {
-      if (state.recordings[state.currentRecording] === undefined) {
-        state.recordings[state.currentRecording] = new Recording();
-      }
-
-      state.recordings[state.currentRecording].addData(
-        inputData.mouseMoves
-          .map(function(mouseEvent) {
-            return new Event(input.extractPositionFromMouseEvent(mouseEvent),
-                             "draw",
-                             Date.now());
-          })
-      );
+  function updateAddData(inputData, state) {
+    if (!inputData.keysDown.current[KEYS.RECORD] ||
+        !inputData.mouseDown ||
+        inputData.mouseMoves.length === 0) {
+      return state;
     }
 
-    return state;
+    var a =  {
+      currentPiece: state.currentPiece,
+      data: state.data.concat(
+        inputData.mouseMoves
+          .map(function(mouseEvent) {
+            var position = input
+                .extractPositionFromMouseEvent(mouseEvent);
+            return createDatum({
+              x: position.x,
+              y: position.y,
+              type: "draw",
+              time: Date.now()
+            });
+          })
+      )
+    };
+
+    return a
+  };
+
+  function createDatum(obj) {
+    return _.extend(copyEvent(obj), { functions: [] });
   };
 
   function initInputData() {
@@ -173,34 +153,68 @@
       keysDown: { previous: {}, current: {} },
       mouseDown: false,
       mousePosition: { previous: undefined, current: undefined },
-      mouseMoves: []
+      mouseMoves: [],
+      uiButtonClicks: []
     };
   };
 
   function initState() {
     return {
-      currentRecording: 1,
-      recordings: []
+      currentPiece: 1,
+      data: []
     };
   };
 
-  function Event(data, type, time) {
-    this.data = data;
-    this.type = type;
-    this.time = time;
-  };
-
-  function Recording() {
-    this.data = [];
-  };
-
-  Recording.prototype = {
-    addData: function(extraData) {
-      this.data = this.data.concat(extraData);
+  function createPiece(data) {
+    return {
+      data: data,
+      functions: []
     }
+  };
+
+  function addDataToPiece(piece, data) {
+    return {
+      data: piece.data.concat(data),
+      functions: piece.functions
+    };
+  };
+
+  function setupButtons(document, pluginNames) {
+    var panel = ui.createPanel(document, document.body);
+    return pluginNames.map(_.partial(ui.addButton,
+                                     panel));
   };
 
   exports.app = {
     start: start
   };
 })(this);
+
+
+  // function updateHighlightPieces(inputData, state) {
+  //   state.pieces.forEach(function(piece, i) {
+  //     piece.selected = inputData.keysDown.current[i.toString()] ? true : false;
+  //   });
+
+  //   return state;
+  // };
+
+  // function updateMovePiece(inputData, state) {
+  //   if (inputData.mouseDown) {
+  //     var movement = {
+  //       x: inputData.mousePosition.current.x - inputData.mousePosition.previous.x,
+  //       y: inputData.mousePosition.current.y - inputData.mousePosition.previous.y
+  //     };
+
+  //     state.pieces
+  //       .filter(function (piece) { return piece.selected; })
+  //       .forEach(function(piece) {
+  //         data.forEach(function(event) {
+  //           event.x += movement.x;
+  //           event.y += movement.y;
+  //         });
+  //       });
+  //   }
+
+  //   return state;
+  // };
