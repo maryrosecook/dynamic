@@ -1,26 +1,29 @@
 ;(function(exports) {
-  var Inputter = function(window) {
-    this._buttonListener = new ButtonListener(window);
+  var Inputter = function(window, buttons) {
+    this._keyboardListener = new KeyboardListener(window);
     this._mouseMoveListener = new MouseMoveListener(window);
+    this._buttonListener = new ButtonListener(buttons);
+    this.buttons = buttons;
   };
 
   Inputter.prototype = {
     update: function() {
+      this._keyboardListener.update();
       this._buttonListener.update();
     },
 
     // Returns true if passed button currently down
     isDown: function(button) {
-      return this._buttonListener.isDown(button);
+      return this._keyboardListener.isDown(button);
     },
 
     // Returns true if passed button just gone down. true once per keypress.
     isPressed: function(button) {
-      return this._buttonListener.isPressed(button);
+      return this._keyboardListener.isPressed(button);
     },
 
     isUnpressed: function(button) {
-      return this._buttonListener.isUnpressed(button);
+      return this._keyboardListener.isUnpressed(button);
     },
 
     getMousePosition: function() {
@@ -35,6 +38,10 @@
     // Stops calling passed fn on mouse move
     unbindMouseMove: function(fn) {
       return this._mouseMoveListener.unbind(fn);
+    },
+
+    isButtonClicked: function(button) {
+      return this._buttonListener.isButtonClicked(button);
     },
 
     LEFT_MOUSE: "LEFT_MOUSE",
@@ -123,7 +130,7 @@
     SINGLE_QUOTE: 222
   };
 
-  var ButtonListener = function(window) {
+  var KeyboardListener = function(window) {
     var self = this;
     this._buttonDownState = {};
     this._buttonPressedState = {};
@@ -146,7 +153,7 @@
     }, false);
   };
 
-  ButtonListener.prototype = {
+  KeyboardListener.prototype = {
     update: function() {
       for (var i in this._buttonPressedState) {
         if (this._buttonPressedState[i] === true) { // tick passed and press event in progress
@@ -254,6 +261,34 @@
 	    } else if (e.clientX) {
         return { x: e.clientX, y: e.clientY };
       }
+    }
+  };
+
+  function ButtonListener(buttons) {
+    this._justClicked = {};
+
+    Object.keys(buttons).forEach((buttonName) => {
+      dom.addEventListener(
+        buttons[buttonName],
+        "click",
+        (event) => {
+          this._justClicked[buttonName] = true;
+        });
+    });
+  };
+
+  ButtonListener.prototype = {
+    update: function() {
+      this._justClicked =
+        Object.keys(this._justClicked)
+          .reduce((justClicked, buttonName) => {
+            justClicked[buttonName] = false;
+            return justClicked;
+          }, {});
+    },
+
+    isButtonClicked: function(buttonName) {
+      return this._justClicked[buttonName] === true;
     }
   };
 

@@ -1,21 +1,29 @@
 ;(function(exports) {
+  var im = Immutable;
+
   function start(window) {
-    var buttons = setupButtons(document, Object.keys(plugins));
     var state = initState();
     var screen = setupScreen(window);
-    var inputter = new Inputter(window);
+    var inputter = setupInputter(window);
 
+    var tick = 0;
     (function loopForever() {
-      state = updateSelection(inputter, state);
-      state = update(inputter, state);
-      draw(state, screen);
-      inputter.update();
+      if (tick++ % 5 === 0) {
+        state = updateSelection(inputter, state);
+        state = update(inputter, state);
+        draw(state, screen);
+        inputter.update();
+      }
+
       requestAnimationFrame(loopForever);
     })();
   };
 
   var plugins = {
-    blue: blue
+    red: color("red"),
+    blue: color("blue"),
+    green: color("green"),
+    yellow: color("yellow")
   };
 
   var groupSelectors = _.range(0, 9)
@@ -28,30 +36,33 @@
                      0,
                      screen.canvas.width,
                      screen.canvas.height);
-    state.data.forEach(_.partial(drawDatum, screen, state));
+    state.get("data").forEach(_.partial(drawDatum, screen, state));
   };
 
   function isSelected(datum, selectorFunctions) {
-    return selectorFunctions.length > 0 &&
-      _.every(selectorFunctions, function(selectorFunction) {
+    return selectorFunctions.count() > 0 &&
+      _.every(selectorFunctions.toJS(), function(selectorFunction) {
         return selectorFunction(datum) === true;
       });
   };
 
   function drawDatum(screen, state, datum) {
     var reducedDatum = applyDatumFunctions(datum);
-    var color = isSelected(datum, state.selectorFunctions) ?
+    var color = isSelected(datum, state.get("selectorFunctions")) ?
         "red" :
-        reducedDatum.color;
-
+        reducedDatum.get("color");
     screen.fillStyle = color;
-    screen.fillRect(reducedDatum.x, reducedDatum.y, 3, 3);
+    screen.fillRect(reducedDatum.get("x"),
+                    reducedDatum.get("y"),
+                    3,
+                    3);
   };
 
   function applyDatumFunctions(datum) {
-    return datum
-      .functions
-      .reduce(function(latestDatum, fn) { return fn(latestDatum); }, datum);
+    return datum.get("functions")
+      .reduce(function(latestDatum, fn) {
+        return fn(latestDatum);
+      }, datum);
   };
 
   function setupScreen(window) {
@@ -78,32 +89,61 @@
     return pipelineInputDataAndState(inputter, state, [
       updateSetCurrentGroup,
       updateAddData,
+      updateForButtonClicks
     ]);
   };
 
+  function updateForButtonClicks(inputter, state) {
+    return Object.keys(inputter.buttons)
+      .reduce((state, buttonName) => {
+        if (inputter.isButtonClicked(buttonName)) {
+          var data = state.get("data").map((datum) => {
+            if (isSelected(datum,
+                           state.get("selectorFunctions"))) {
+              return datum.set("functions",
+                               datum
+                                 .get("functions")
+                                 .push(plugins[buttonName]));
+            } else {
+              return datum;
+            }
+          });
+
+          return state.set("data", data);
+        } else {
+          return state;
+        }
+      }, state);
+  };
+
   function updateSelection(inputter, state) {
-    return groupSelectors.reduce(function(state, groupSelector, i) {
-      var groupSelector = groupSelectors[i];
-      if (inputter.isPressed(inputter[i]) &&
-          !_.contains(state.selectorFunctions, groupSelector)) {
-        state.selectorFunctions.push(groupSelector);
-      } else if (inputter.isUnpressed(inputter[i])) {
-        state.selectorFunctions =
-          _.without(state.selectorFunctions, groupSelector);
-      }
+    return groupSelectors
+      .reduce(function(state, groupSelector, i) {
+        var groupSelector = groupSelectors[i];
+        if (inputter.isPressed(inputter[i]) &&
+            !_.contains(state.get("selectorFunctions"),
+                        groupSelector)) {
+          return state
+            .set("selectorFunctions",
+                 state.get("selectorFunctions")
+                 .push(groupSelector));
+        } else if (inputter.isUnpressed(inputter[i])) {
+          return state.set("selectorFunctions",
+                           state.get("selectorFunctions")
+                           .filter(function(fn) {
+                             return fn !== groupSelector;
+                           }));
+        }
 
-      return state;
-    }, state);
-
-    return state;
+        return state;
+      }, state);
   };
 
   function updateSetCurrentGroup(inputter, state) {
-    state.currentGroup = inputter.isUnpressed(inputter.SHIFT) ?
-      state.currentGroup + 1 :
-      state.currentGroup;
-
-    return state;
+    return state.set("currentGroup",
+                     inputter.isUnpressed(inputter.SHIFT) ?
+                       state.get("currentGroup") + 1 :
+                       state.get("currentGroup"));
   };
 
   function updateAddData(inputter, state) {
@@ -113,31 +153,36 @@
     }
 
     var mousePosition = inputter.getMousePosition();
-    return {
-      currentGroup: state.currentGroup,
-      selectorFunctions: state.selectorFunctions,
-      data: state.data.concat(
-        createDatum({
-          x: mousePosition.x,
-          y: mousePosition.y,
-          type: "draw",
-          time: Date.now(),
-          group: state.currentGroup,
-          color: "black"
-        }))
-    };
+    return state.set("data",
+                     state.get("data").push(
+                       createDatum({
+                         x: mousePosition.x,
+                         y: mousePosition.y,
+                         type: "draw",
+                         time: Date.now(),
+                         group: state.get("currentGroup"),
+                         color: "black"
+                       })));
   };
 
   function createDatum(obj) {
-    return _.extend(copyEvent(obj), { functions: [] });
+    return im.Map(obj).set("functions", im.List());
   };
 
   function initState() {
-    return {
+    return im.Map({
       currentGroup: 1,
-      data: [],
-      selectorFunctions: []
-    };
+      data: im.List(),
+      selectorFunctions: im.List()
+    });
+  };
+
+  function setupInputter(window) {
+    var pluginNames = Object.keys(plugins);
+    var buttons = setupButtons(document, pluginNames);
+    return new Inputter(
+      window,
+      _.object(pluginNames, buttons));
   };
 
   function setupButtons(document, pluginNames) {
